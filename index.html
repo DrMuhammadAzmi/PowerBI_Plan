@@ -1,298 +1,255 @@
-import React, { useState, useMemo } from 'react';
-
-// 1. Data Structure based on your uploaded image
-const treeData = {
-  name: "Power BI Study Plan", type: "root",
-  children: [
-      {
-          name: "Phase 1: Data Ingestion & Transformation", type: "phase",
-          children: [
-              {
-                  name: "Bring Ingredients (Get Data)", type: "leaf",
-                  children: [
-                      { name: "Select Text/CSV", type: "leaf" },
-                      { name: "Transform Data (Enter Kitchen)", type: "leaf" }
-                  ]
-              },
-              {
-                  name: "Chopping and Cleaning", type: "leaf",
-                  children: [
-                      { name: "Rename Columns", type: "leaf" },
-                      { name: "Capitalize Text", type: "leaf" },
-                      { name: "Check Data Types", type: "leaf" },
-                      { name: "Filter Rows", type: "leaf" }
-                  ]
-              },
-              { name: "Close & Apply", type: "leaf" }
-          ]
-      },
-      {
-          name: "Phase 2: Data Modeling", type: "phase",
-          children: [
-              {
-                  name: "Three Views", type: "leaf",
-                  children: [
-                      { name: "Report View", type: "leaf" },
-                      { name: "Table/Data View", type: "leaf" },
-                      { name: "Model View", type: "leaf" }
-                  ]
-              },
-              { name: "Format Data (Decimal Places)", type: "leaf" },
-              {
-                  name: "Create Buckets (Grouping)", type: "leaf",
-                  children: [
-                      { name: "Low Stress (1-3)", type: "leaf" },
-                      { name: "Medium Stress (4-7)", type: "leaf" },
-                      { name: "High Stress (8-10)", type: "leaf" }
-                  ]
-              }
-          ]
-      },
-      {
-          name: "Phase 3: DAX Basics", type: "phase",
-          children: [
-              {
-                  name: "Calculated Columns", type: "leaf",
-                  children: [
-                      { name: "Row-by-Row Math", type: "leaf" },
-                      { name: "Example: Total Screen Time", type: "leaf" }
-                  ]
-              },
-              {
-                  name: "Measures", type: "leaf",
-                  children: [
-                      { name: "On-the-Fly Math", type: "leaf" },
-                      { name: "Example: Average Sleep", type: "leaf" }
-                  ]
-              },
-              {
-                  name: "CALCULATE Function", type: "leaf",
-                  children: [
-                      { name: "Filtered Counting", type: "leaf" },
-                      { name: "Example: Teens with Depression", type: "leaf" }
-                  ]
-              }
-          ]
-      },
-      {
-          name: "Phase 4: Visualizations & Interactivity", type: "phase",
-          children: [
-              {
-                  name: "Visual Panes", type: "leaf",
-                  children: [
-                      { name: "Data Pane", type: "leaf" },
-                      { name: "Visualizations Pane", type: "leaf" }
-                  ]
-              },
-              {
-                  name: "Chart Types", type: "leaf",
-                  children: [
-                      { name: "Card Visuals (Headlines)", type: "leaf" },
-                      { name: "Clustered Column Charts", type: "leaf" },
-                      { name: "Pie Charts", type: "leaf" }
-                  ]
-              },
-              {
-                  name: "Interactivity Features", type: "leaf",
-                  children: [
-                      { name: "Cross-Filtering (Magic Trick)", type: "leaf" },
-                      { name: "Slicers (Remote Control)", type: "leaf" }
-                  ]
-              }
-          ]
-      },
-      {
-          name: "Phase 5: Publishing & Sharing", type: "phase",
-          children: [
-              { name: "Save .pbix Local Copy", type: "leaf" },
-              { name: "Publish to Power BI Service", type: "leaf" },
-              { name: "View Live Web Dashboard", type: "leaf" }
-          ]
-      },
-      {
-          name: "Bonus: Data Marriage", type: "phase",
-          children: [
-              { name: "Append Queries (Stacking)", type: "leaf" },
-              { name: "Merge Queries (Stitching via ID)", type: "leaf" }
-          ]
-      }
-  ]
-};
-
-// 2. Interactive Canvas Engine (Replacing React Flow)
-const NODE_WIDTH = 220;
-const NODE_HEIGHT = 48;
-const X_SPACING = 300;
-const Y_SPACING = 65;
-
-const generateLayout = (data) => {
-  const initialNodes = [];
-  const initialEdges = [];
-  let globalY = 0; // Tracks vertical placement for leaves
-
-  // Recursive function to build the tree
-  const traverse = (node, depth = 0, parentId = null) => {
-    // Generate simple unique ID
-    const id = `node-${Math.random().toString(36).substr(2, 9)}`;
-
-    const reactNode = {
-      id,
-      position: { x: depth * X_SPACING, y: 0 },
-      data: {
-        label: node.name,
-        nodeType: node.type,
-        hasChildren: !!(node.children && node.children.length > 0)
-      }
-    };
-
-    if (node.children && node.children.length > 0) {
-      let minY = Infinity;
-      let maxY = -Infinity;
-
-      // Process children and calculate parent's Y as the exact middle
-      node.children.forEach(child => {
-        const childPos = traverse(child, depth + 1, id);
-        minY = Math.min(minY, childPos.y);
-        maxY = Math.max(maxY, childPos.y);
-      });
-
-      reactNode.position.y = (minY + maxY) / 2;
-    } else {
-      // Leaf nodes drive the vertical spacing
-      reactNode.position.y = globalY;
-      globalY += Y_SPACING;
-    }
-
-    initialNodes.push(reactNode);
-
-    // Create edge connecting to parent
-    if (parentId) {
-      initialEdges.push({
-        id: `e-${parentId}-${id}`,
-        source: parentId,
-        target: id,
-      });
-    }
-
-    return reactNode.position;
-  };
-
-  traverse(data);
-  return { nodes: initialNodes, edges: initialEdges };
-};
-
-// 3. Main App Component
-export default function App() {
-  const layout = useMemo(() => generateLayout(treeData), []);
-  const [nodes, setNodes] = useState(layout.nodes);
-  const [transform, setTransform] = useState({ x: 100, y: 150, scale: 0.55 });
-  const [isPanning, setIsPanning] = useState(false);
-  const [draggingNode, setDraggingNode] = useState(null);
-
-  // Tailwind color mappings
-  const colors = {
-    root: 'bg-[#cccefc] border-[#a6abf0]',
-    phase: 'bg-[#b3d4ff] border-[#8ebbf2]',
-    leaf: 'bg-[#a6e6c4] border-[#85ccaa]',
-  };
-
-  const handlePointerMove = (e) => {
-    if (isPanning) {
-      setTransform(t => ({ ...t, x: t.x + e.movementX, y: t.y + e.movementY }));
-    } else if (draggingNode) {
-      setNodes(nds => nds.map(n =>
-        n.id === draggingNode
-          ? { ...n, position: { x: n.position.x + e.movementX / transform.scale, y: n.position.y + e.movementY / transform.scale } }
-          : n
-      ));
-    }
-  };
-
-  return (
-    <div
-      className="w-screen h-screen overflow-hidden bg-[#0f172a] relative touch-none select-none cursor-grab active:cursor-grabbing"
-      onPointerDown={(e) => {
-        if (e.target === e.currentTarget) {
-          setIsPanning(true);
-          e.currentTarget.setPointerCapture(e.pointerId);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power BI Study Plan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles to hide the default browser arrow and handle rotations */
+        details > summary {
+            list-style: none;
         }
-      }}
-      onPointerMove={handlePointerMove}
-      onPointerUp={() => { setIsPanning(false); setDraggingNode(null); }}
-      onPointerCancel={() => { setIsPanning(false); setDraggingNode(null); }}
-      onWheel={(e) => setTransform(t => ({ ...t, scale: Math.min(Math.max(0.1, t.scale - e.deltaY * 0.002), 3) }))}
-    >
-      {/* Instructional Banner */}
-      <div className="absolute top-4 left-4 z-10 bg-white/10 backdrop-blur-md border border-white/20 text-slate-200 px-4 py-2 rounded-lg text-sm shadow-lg pointer-events-none">
-        <p className="font-semibold mb-1">Interactive Mind Map</p>
-        <ul className="list-disc pl-4 text-xs text-slate-300">
-          <li>Click & Drag background to pan</li>
-          <li>Scroll to zoom in/out</li>
-          <li>Drag individual nodes to rearrange</li>
-        </ul>
-      </div>
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+        
+        /* Rotate the custom SVG arrow when details is open */
+        details[open] > summary .chevron-icon {
+            transform: rotate(90deg);
+        }
+        
+        /* Smooth opening animation for the content */
+        details[open] summary ~ * {
+            animation: slideDown 0.3s ease-in-out;
+        }
 
-      {/* Edges Layer */}
-      <svg className="absolute inset-0 pointer-events-none text-[#5c7499]" width="100%" height="100%">
-        <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
-          {layout.edges.map(edge => {
-            const sourceNode = nodes.find(n => n.id === edge.source);
-            const targetNode = nodes.find(n => n.id === edge.target);
-            if (!sourceNode || !targetNode) return null;
+        @keyframes slideDown {
+            0% { opacity: 0; transform: translateY(-10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-[#0f172a] text-slate-800 dark:text-slate-200 font-sans min-h-screen p-4 md:p-8 transition-colors duration-300">
 
-            const sourceX = sourceNode.position.x + NODE_WIDTH + (sourceNode.data.hasChildren ? 14 : 0);
-            const sourceY = sourceNode.position.y + NODE_HEIGHT / 2;
-            const targetX = targetNode.position.x - 4;
-            const targetY = targetNode.position.y + NODE_HEIGHT / 2;
+    <div class="max-w-3xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 text-center md:text-left border-b border-slate-200 dark:border-slate-700 pb-6 transition-colors duration-300">
+            <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center justify-center md:justify-start gap-3 transition-colors duration-300">
+                <span class="w-4 h-8 bg-[#cccefc] rounded-sm inline-block"></span>
+                Power BI Study Plan
+            </h1>
+            <p class="text-slate-600 dark:text-slate-400 transition-colors duration-300">Expand the sections below to view detailed learning modules.</p>
+        </header>
 
-            // Draws the smooth right-angle bezier curves
-            const d = `M ${sourceX} ${sourceY} C ${(sourceX + targetX) / 2} ${sourceY}, ${(sourceX + targetX) / 2} ${targetY}, ${targetX} ${targetY}`;
+        <!-- Accordion Container -->
+        <div class="space-y-4">
 
-            return <path key={edge.id} d={d} fill="none" stroke="currentColor" strokeWidth={1.5} />
-          })}
-        </g>
-      </svg>
+            <!-- Phase 1 -->
+            <details class="group bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-300">
+                <summary class="flex items-center justify-between cursor-pointer p-5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors border-l-4 border-[#b3d4ff]">
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white transition-colors duration-300">Phase 1: Data Ingestion & Transformation</h2>
+                    <svg class="chevron-icon w-5 h-5 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </summary>
+                <div class="p-5 pt-0 mt-2 space-y-3">
+                    
+                    <details class="bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
+                        <summary class="cursor-pointer p-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 border-l-2 border-[#a6e6c4]">
+                            Bring Ingredients (Get Data)
+                        </summary>
+                        <ul class="pl-8 pb-3 pr-3 text-sm text-slate-600 dark:text-slate-400 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-600">
+                            <li>Select Text/CSV</li>
+                            <li>Transform Data (Enter Kitchen)</li>
+                        </ul>
+                    </details>
 
-      {/* Nodes Layer */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
-          transformOrigin: '0 0'
-        }}
-      >
-        {nodes.map(node => (
-          <div
-            key={node.id}
-            className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing flex items-center justify-center px-3 shadow-md rounded-md border text-[13px] text-black font-medium text-center ${colors[node.data.nodeType] || colors.leaf}`}
-            style={{
-              left: node.position.x,
-              top: node.position.y,
-              width: NODE_WIDTH,
-              height: NODE_HEIGHT,
-            }}
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              setDraggingNode(node.id);
-              e.currentTarget.setPointerCapture(e.pointerId);
-            }}
-          >
-            {/* Input connector visual */}
-            {node.data.nodeType !== 'root' && (
-              <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#5c7499]" />
-            )}
+                    <details class="bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
+                        <summary class="cursor-pointer p-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 border-l-2 border-[#a6e6c4]">
+                            Chopping and Cleaning
+                        </summary>
+                        <ul class="pl-8 pb-3 pr-3 text-sm text-slate-600 dark:text-slate-400 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-600">
+                            <li>Rename Columns</li>
+                            <li>Capitalize Text</li>
+                            <li>Check Data Types</li>
+                            <li>Filter Rows</li>
+                        </ul>
+                    </details>
 
-            <span className="leading-tight px-1">{node.data.label}</span>
+                    <div class="p-3 text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 border-l-2 border-[#a6e6c4] transition-colors duration-300">
+                        Close & Apply
+                    </div>
 
-            {/* Custom "<" badge for nodes that branch out */}
-            {node.data.hasChildren && (
-              <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-[18px] h-[18px] rounded-full bg-[#a4b7cc] border-[1.5px] border-black flex items-center justify-center text-[10px] font-bold z-10 select-none">
-                {'<'}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+                </div>
+            </details>
+
+            <!-- Phase 2 -->
+            <details class="group bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-300">
+                <summary class="flex items-center justify-between cursor-pointer p-5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors border-l-4 border-[#b3d4ff]">
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white transition-colors duration-300">Phase 2: Data Modeling</h2>
+                    <svg class="chevron-icon w-5 h-5 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </summary>
+                <div class="p-5 pt-0 mt-2 space-y-3">
+                    
+                    <details class="bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
+                        <summary class="cursor-pointer p-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 border-l-2 border-[#a6e6c4]">
+                            Three Views
+                        </summary>
+                        <ul class="pl-8 pb-3 pr-3 text-sm text-slate-600 dark:text-slate-400 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-600">
+                            <li>Report View</li>
+                            <li>Table/Data View</li>
+                            <li>Model View</li>
+                        </ul>
+                    </details>
+
+                    <div class="p-3 text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 border-l-2 border-[#a6e6c4] transition-colors duration-300">
+                        Format Data (Decimal Places)
+                    </div>
+
+                    <details class="bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
+                        <summary class="cursor-pointer p-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 border-l-2 border-[#a6e6c4]">
+                            Create Buckets (Grouping)
+                        </summary>
+                        <ul class="pl-8 pb-3 pr-3 text-sm text-slate-600 dark:text-slate-400 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-600">
+                            <li>Low Stress (1-3)</li>
+                            <li>Medium Stress (4-7)</li>
+                            <li>High Stress (8-10)</li>
+                        </ul>
+                    </details>
+
+                </div>
+            </details>
+
+            <!-- Phase 3 -->
+            <details class="group bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-300">
+                <summary class="flex items-center justify-between cursor-pointer p-5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors border-l-4 border-[#b3d4ff]">
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white transition-colors duration-300">Phase 3: DAX Basics</h2>
+                    <svg class="chevron-icon w-5 h-5 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </summary>
+                <div class="p-5 pt-0 mt-2 space-y-3">
+                    
+                    <details class="bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
+                        <summary class="cursor-pointer p-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 border-l-2 border-[#a6e6c4]">
+                            Calculated Columns
+                        </summary>
+                        <ul class="pl-8 pb-3 pr-3 text-sm text-slate-600 dark:text-slate-400 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-600">
+                            <li>Row-by-Row Math</li>
+                            <li>Example: Total Screen Time</li>
+                        </ul>
+                    </details>
+
+                    <details class="bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
+                        <summary class="cursor-pointer p-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 border-l-2 border-[#a6e6c4]">
+                            Measures
+                        </summary>
+                        <ul class="pl-8 pb-3 pr-3 text-sm text-slate-600 dark:text-slate-400 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-600">
+                            <li>On-the-Fly Math</li>
+                            <li>Example: Average Sleep</li>
+                        </ul>
+                    </details>
+
+                    <details class="bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
+                        <summary class="cursor-pointer p-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 border-l-2 border-[#a6e6c4]">
+                            CALCULATE Function
+                        </summary>
+                        <ul class="pl-8 pb-3 pr-3 text-sm text-slate-600 dark:text-slate-400 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-600">
+                            <li>Filtered Counting</li>
+                            <li>Example: Teens with Depression</li>
+                        </ul>
+                    </details>
+
+                </div>
+            </details>
+
+            <!-- Phase 4 -->
+            <details class="group bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-300">
+                <summary class="flex items-center justify-between cursor-pointer p-5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors border-l-4 border-[#b3d4ff]">
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white transition-colors duration-300">Phase 4: Visualizations & Interactivity</h2>
+                    <svg class="chevron-icon w-5 h-5 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </summary>
+                <div class="p-5 pt-0 mt-2 space-y-3">
+                    
+                    <details class="bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
+                        <summary class="cursor-pointer p-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 border-l-2 border-[#a6e6c4]">
+                            Visual Panes
+                        </summary>
+                        <ul class="pl-8 pb-3 pr-3 text-sm text-slate-600 dark:text-slate-400 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-600">
+                            <li>Data Pane</li>
+                            <li>Visualizations Pane</li>
+                        </ul>
+                    </details>
+
+                    <details class="bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
+                        <summary class="cursor-pointer p-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 border-l-2 border-[#a6e6c4]">
+                            Chart Types
+                        </summary>
+                        <ul class="pl-8 pb-3 pr-3 text-sm text-slate-600 dark:text-slate-400 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-600">
+                            <li>Card Visuals (Headlines)</li>
+                            <li>Clustered Column Charts</li>
+                            <li>Pie Charts</li>
+                        </ul>
+                    </details>
+
+                    <details class="bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
+                        <summary class="cursor-pointer p-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2 border-l-2 border-[#a6e6c4]">
+                            Interactivity Features
+                        </summary>
+                        <ul class="pl-8 pb-3 pr-3 text-sm text-slate-600 dark:text-slate-400 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-600">
+                            <li>Cross-Filtering (Magic Trick)</li>
+                            <li>Slicers (Remote Control)</li>
+                        </ul>
+                    </details>
+
+                </div>
+            </details>
+
+            <!-- Phase 5 -->
+            <details class="group bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-300">
+                <summary class="flex items-center justify-between cursor-pointer p-5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors border-l-4 border-[#b3d4ff]">
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white transition-colors duration-300">Phase 5: Publishing & Sharing</h2>
+                    <svg class="chevron-icon w-5 h-5 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </summary>
+                <div class="p-5 pt-0 mt-2 space-y-3 text-sm text-slate-700 dark:text-slate-300 transition-colors duration-300">
+                    <ul class="pl-5 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-500">
+                        <li>Save .pbix Local Copy</li>
+                        <li>Publish to Power BI Service</li>
+                        <li>View Live Web Dashboard</li>
+                    </ul>
+                </div>
+            </details>
+
+            <!-- Bonus Phase -->
+            <details class="group bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-300">
+                <summary class="flex items-center justify-between cursor-pointer p-5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors border-l-4 border-[#b3d4ff]">
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white transition-colors duration-300">Bonus: Data Marriage</h2>
+                    <svg class="chevron-icon w-5 h-5 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </summary>
+                <div class="p-5 pt-0 mt-2 space-y-3 text-sm text-slate-700 dark:text-slate-300 transition-colors duration-300">
+                    <ul class="pl-5 space-y-2 list-disc marker:text-slate-400 dark:marker:text-slate-500">
+                        <li>Append Queries (Stacking)</li>
+                        <li>Merge Queries (Stitching via ID)</li>
+                    </ul>
+                </div>
+            </details>
+
+        </div>
     </div>
-  );
-}
+
+    <!-- Optional: Tiny script to act like an accordion (closing others when one opens) -->
+    <script>
+        const topLevelDetails = document.querySelectorAll('.space-y-4 > details');
+        
+        topLevelDetails.forEach((targetDetail) => {
+            targetDetail.addEventListener('click', () => {
+                if (!targetDetail.hasAttribute('open')) {
+                    // Close all others
+                    topLevelDetails.forEach((detail) => {
+                        if (detail !== targetDetail) {
+                            detail.removeAttribute('open');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
